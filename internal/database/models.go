@@ -10,6 +10,22 @@ import (
 	"github.com/google/uuid"
 )
 
+type Chat struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	ChatBy    uuid.UUID
+	ChatWith  uuid.UUID
+}
+
+type Message struct {
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Body      string
+	ChatID    uuid.UUID
+}
+
 type User struct {
 	ID             uuid.UUID
 	CreatedAt      time.Time
