@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/magicznykacpur/psst-backend/api"
+	"github.com/magicznykacpur/psst-backend/env"
 	"github.com/magicznykacpur/psst-backend/internal/database"
-	"github.com/magicznykacpur/psst-backend/internal/env"
 )
 
 func main() {
