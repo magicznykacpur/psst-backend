@@ -37,12 +37,48 @@ func (q *Queries) CreateChatWith(ctx context.Context, arg CreateChatWithParams) 
 	return i, err
 }
 
+const deleteChat = `-- name: DeleteChat :exec
+DELETE FROM chats WHERE id = $1 AND sender_id = $2
+`
+
+type DeleteChatParams struct {
+	ID       uuid.UUID
+	SenderID uuid.UUID
+}
+
+func (q *Queries) DeleteChat(ctx context.Context, arg DeleteChatParams) error {
+	_, err := q.db.ExecContext(ctx, deleteChat, arg.ID, arg.SenderID)
+	return err
+}
+
 const getChatById = `-- name: GetChatById :one
 SELECT id, created_at, updated_at, sender_id, receiver_id FROM chats WHERE id = $1
 `
 
 func (q *Queries) GetChatById(ctx context.Context, id uuid.UUID) (Chat, error) {
 	row := q.db.QueryRowContext(ctx, getChatById, id)
+	var i Chat
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.SenderID,
+		&i.ReceiverID,
+	)
+	return i, err
+}
+
+const getChatByIdAndSender = `-- name: GetChatByIdAndSender :one
+SELECT id, created_at, updated_at, sender_id, receiver_id FROM chats WHERE id = $1 AND sender_id = $2
+`
+
+type GetChatByIdAndSenderParams struct {
+	ID       uuid.UUID
+	SenderID uuid.UUID
+}
+
+func (q *Queries) GetChatByIdAndSender(ctx context.Context, arg GetChatByIdAndSenderParams) (Chat, error) {
+	row := q.db.QueryRowContext(ctx, getChatByIdAndSender, arg.ID, arg.SenderID)
 	var i Chat
 	err := row.Scan(
 		&i.ID,

@@ -19,11 +19,13 @@ type Chat struct {
 }
 
 type Message struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Body      string
-	ChatID    uuid.UUID
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	Body       string
+	ChatID     uuid.UUID
+	SenderID   uuid.UUID
+	ReceiverID uuid.UUID
 }
 
 type User struct {

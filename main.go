@@ -36,8 +36,11 @@ func main() {
 
 	mux.Handle("POST /api/messages", apiConfig.IsLoggedIn(apiConfig.HandlerCreateMessage))
 	mux.Handle("GET /api/messages/{chat_id}", apiConfig.IsLoggedIn(apiConfig.HandlerGetAllMessagesFromChat))
+	mux.Handle("DELETE /api/messages", apiConfig.IsLoggedIn(apiConfig.HandlerDeleteMessageFromChat))
+
 	mux.Handle("POST /api/chats", apiConfig.IsLoggedIn(apiConfig.HandlerCreateChat))
 	mux.Handle("GET /api/chats", apiConfig.IsLoggedIn(apiConfig.HandlerGetAllUsersChats))
+	mux.Handle("DELETE /api/chats/{id}", apiConfig.IsLoggedIn(apiConfig.HandlerDeleteChat))
 
 	server := http.Server{Handler: &mux, Addr: "localhost:" + apiConfig.Port}
 

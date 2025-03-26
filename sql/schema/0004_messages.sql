@@ -5,7 +5,7 @@ CREATE TABLE messages (
     updated_at TIMESTAMP NOT NULL,
     body TEXT NOT NULL,
     chat_id UUID NOT NULL,
-    FOREIGN KEY (chat_id) REFERENCES chats (id)
+    FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
 );
 
 -- +goose Down

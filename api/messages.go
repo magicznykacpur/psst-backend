@@ -52,12 +52,14 @@ func (cfg *ApiConfig) HandlerCreateMessage(w http.ResponseWriter, r *http.Reques
 
 	message, err := cfg.DB.CreateMessage(r.Context(),
 		database.CreateMessageParams{
-			ChatID: chat.ID,
-			Body:   msgRequest.Body,
+			ChatID:     chat.ID,
+			Body:       msgRequest.Body,
+			SenderID:   chat.SenderID,
+			ReceiverID: chat.ReceiverID,
 		},
 	)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "couldnt send message to chat")
+		respondWithError(w, http.StatusInternalServerError, "couldn't send message to chat")
 		return
 	}
 
@@ -116,4 +118,67 @@ func (cfg *ApiConfig) HandlerGetAllMessagesFromChat(w http.ResponseWriter, r *ht
 	log.Printf("retrieved all messages from chat %s...", chat.ID.String())
 
 	respondWithJSON(w, http.StatusOK, msgsResponse)
+}
+
+type deleteMessageRequest struct {
+	MessageID uuid.UUID `json:"message_id"`
+	ChatID    uuid.UUID `json:"chat_id"`
+}
+
+func (cfg *ApiConfig) HandlerDeleteMessageFromChat(w http.ResponseWriter, r *http.Request) {
+	userId, err := uuid.Parse(r.Header.Get("User-ID"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "user id malformed")
+		return
+	}
+
+	defer r.Body.Close()
+
+	reqBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't read request bytes")
+		return
+	}
+
+	var deleteMsgReq deleteMessageRequest
+	err = json.Unmarshal(reqBytes, &deleteMsgReq)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't unmarshal request body")
+		return
+	}
+
+	if deleteMsgReq.MessageID == (uuid.UUID{}) || deleteMsgReq.ChatID == (uuid.UUID{}) {
+		respondWithError(w, http.StatusBadRequest, "request must contain message id and chat id")
+		return
+	}
+
+	msg, err := cfg.DB.GetMessageWhereChatAndUser(r.Context(),
+		database.GetMessageWhereChatAndUserParams{
+			SenderID: userId,
+			ChatID:   deleteMsgReq.ChatID,
+		},
+	)
+	if err != nil && strings.Contains(err.Error(), noRows) {
+		respondWithError(w, http.StatusBadRequest, "message does not exist, or does not belong to user")
+		return
+	}
+	if err != nil && !strings.Contains(err.Error(), noRows) {
+		respondWithError(w, http.StatusBadRequest, "couldn't delete message")
+		return
+	}
+
+	err = cfg.DB.DeleteMessage(r.Context(),
+		database.DeleteMessageParams{
+			ID:     msg.ID,
+			ChatID: msg.ChatID,
+		},
+	)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't delete message")
+		return
+	}
+
+	log.Printf("deleted message %s from chat %s", deleteMsgReq.MessageID.String(), deleteMsgReq.ChatID.String())
+
+	w.WriteHeader(http.StatusOK)
 }

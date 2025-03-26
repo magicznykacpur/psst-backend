@@ -115,3 +115,43 @@ func (cfg *ApiConfig) HandlerGetAllUsersChats(w http.ResponseWriter, r *http.Req
 
 	respondWithJSON(w, http.StatusOK, chatsResponse)
 }
+
+func (cfg *ApiConfig) HandlerDeleteChat(w http.ResponseWriter, r *http.Request) {
+	userId, err := uuid.Parse(r.Header.Get("User-ID"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "user id malformed")
+		return
+	}
+
+	chatId, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "chat id malformed")
+		return
+	}
+
+	chat, err := cfg.DB.GetChatByIdAndSender(r.Context(),
+		database.GetChatByIdAndSenderParams{
+			ID:       chatId,
+			SenderID: userId,
+		},
+	)
+	if err != nil && strings.Contains(err.Error(), noRows) {
+		respondWithError(w, http.StatusForbidden, "chat doesn't exist or doesn't belong to user")
+		return
+	}
+	if err != nil && !strings.Contains(err.Error(), noRows) {
+		respondWithError(w, http.StatusForbidden, "couldn't find chat")
+		return
+	}
+
+	err = cfg.DB.DeleteChat(r.Context(), database.DeleteChatParams{ID: chat.ID, SenderID: chat.SenderID})
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "couldn't delete chat")
+		return
+	}
+
+	log.Printf("deleted chat %s...", chat.ID.String())
+
+	w.WriteHeader(http.StatusOK)
+}

@@ -12,24 +12,33 @@ import (
 )
 
 const createMessage = `-- name: CreateMessage :one
-INSERT INTO messages (id, created_at, updated_at, body, chat_id)
+INSERT INTO messages (id, created_at, updated_at, body, chat_id, sender_id, receiver_id)
 VALUES (
     gen_random_uuid (),
     NOW(),
     NOW(),
     $1,
-    $2
+    $2,
+    $3,
+    $4
 )
-RETURNING id, created_at, updated_at, body, chat_id
+RETURNING id, created_at, updated_at, body, chat_id, sender_id, receiver_id
 `
 
 type CreateMessageParams struct {
-	Body   string
-	ChatID uuid.UUID
+	Body       string
+	ChatID     uuid.UUID
+	SenderID   uuid.UUID
+	ReceiverID uuid.UUID
 }
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (Message, error) {
-	row := q.db.QueryRowContext(ctx, createMessage, arg.Body, arg.ChatID)
+	row := q.db.QueryRowContext(ctx, createMessage,
+		arg.Body,
+		arg.ChatID,
+		arg.SenderID,
+		arg.ReceiverID,
+	)
 	var i Message
 	err := row.Scan(
 		&i.ID,
@@ -37,12 +46,28 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (M
 		&i.UpdatedAt,
 		&i.Body,
 		&i.ChatID,
+		&i.SenderID,
+		&i.ReceiverID,
 	)
 	return i, err
 }
 
+const deleteMessage = `-- name: DeleteMessage :exec
+DELETE FROM messages WHERE id = $1 AND chat_id = $2
+`
+
+type DeleteMessageParams struct {
+	ID     uuid.UUID
+	ChatID uuid.UUID
+}
+
+func (q *Queries) DeleteMessage(ctx context.Context, arg DeleteMessageParams) error {
+	_, err := q.db.ExecContext(ctx, deleteMessage, arg.ID, arg.ChatID)
+	return err
+}
+
 const getMessageById = `-- name: GetMessageById :one
-SELECT id, created_at, updated_at, body, chat_id FROM messages WHERE id = $1
+SELECT id, created_at, updated_at, body, chat_id, sender_id, receiver_id FROM messages WHERE id = $1
 `
 
 func (q *Queries) GetMessageById(ctx context.Context, id uuid.UUID) (Message, error) {
@@ -54,12 +79,38 @@ func (q *Queries) GetMessageById(ctx context.Context, id uuid.UUID) (Message, er
 		&i.UpdatedAt,
 		&i.Body,
 		&i.ChatID,
+		&i.SenderID,
+		&i.ReceiverID,
+	)
+	return i, err
+}
+
+const getMessageWhereChatAndUser = `-- name: GetMessageWhereChatAndUser :one
+SELECT id, created_at, updated_at, body, chat_id, sender_id, receiver_id FROM messages WHERE chat_id = $1 and sender_id = $2
+`
+
+type GetMessageWhereChatAndUserParams struct {
+	ChatID   uuid.UUID
+	SenderID uuid.UUID
+}
+
+func (q *Queries) GetMessageWhereChatAndUser(ctx context.Context, arg GetMessageWhereChatAndUserParams) (Message, error) {
+	row := q.db.QueryRowContext(ctx, getMessageWhereChatAndUser, arg.ChatID, arg.SenderID)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Body,
+		&i.ChatID,
+		&i.SenderID,
+		&i.ReceiverID,
 	)
 	return i, err
 }
 
 const getMessagesByChatId = `-- name: GetMessagesByChatId :many
-SELECT id, created_at, updated_at, body, chat_id FROM messages WHERE chat_id = $1
+SELECT id, created_at, updated_at, body, chat_id, sender_id, receiver_id FROM messages WHERE chat_id = $1
 `
 
 func (q *Queries) GetMessagesByChatId(ctx context.Context, chatID uuid.UUID) ([]Message, error) {
@@ -77,6 +128,8 @@ func (q *Queries) GetMessagesByChatId(ctx context.Context, chatID uuid.UUID) ([]
 			&i.UpdatedAt,
 			&i.Body,
 			&i.ChatID,
+			&i.SenderID,
+			&i.ReceiverID,
 		); err != nil {
 			return nil, err
 		}

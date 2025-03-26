@@ -10,3 +10,9 @@ VALUES (
     gen_random_uuid (), NOW(), NOW(), $1, $2
 )
 RETURNING *;
+
+-- name: DeleteChat :exec
+DELETE FROM chats WHERE id = $1 AND sender_id = $2;
+
+-- name: GetChatByIdAndSender :one
+SELECT * FROM chats WHERE id = $1 AND sender_id = $2;
