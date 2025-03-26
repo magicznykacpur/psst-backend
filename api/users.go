@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -127,7 +128,7 @@ func (cfg *ApiConfig) HandlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	log.Printf("user %s, %s created...", user.Email, user.UserName)
+	log.Printf("user with email: %s, and user name: %s created...", user.Email, user.UserName)
 
 	respondWithJSON(w, http.StatusCreated,
 		userResponse{
@@ -138,4 +139,61 @@ func (cfg *ApiConfig) HandlerCreateUser(w http.ResponseWriter, r *http.Request) 
 			Username:  user.UserName,
 		},
 	)
+}
+
+type loginUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type loginUserResponse struct {
+	Token string `json:"token"`
+}
+
+func (cfg *ApiConfig) HandlerLoginUser(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	requestBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't read request body bytes")
+		return
+	}
+
+	var loginUserRequest loginUserRequest
+	err = json.Unmarshal(requestBytes, &loginUserRequest)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't unmarshal request body")
+		return
+	}
+
+	if loginUserRequest.Email == "" || loginUserRequest.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "request body invalid, must contain: email and password")
+		return
+	}
+
+	user, err := cfg.DB.GetUserByEmail(r.Context(), loginUserRequest.Email)
+	if err != nil && strings.Contains(err.Error(), "sql: no rows in result set") {
+		respondWithError(w, http.StatusUnauthorized, "email or password incorrect")
+		return
+	}
+
+	if err != nil && !strings.Contains(err.Error(), "sql: no rows in result set") {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	passwordCorrect := auth.CheckPassword(user.HashedPassword, loginUserRequest.Password)
+	if !passwordCorrect {
+		respondWithError(w, http.StatusUnauthorized, "email or password incorrect")
+		return
+	}
+
+	token, err := auth.CreateJWTToken(user.ID, os.Getenv("JWT_SECRET"), time.Hour)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't create jwt token")
+		return
+	}
+
+	log.Printf("user %s logged in...", user.UserName)
+	respondWithJSON(w, http.StatusOK, loginUserResponse{Token: token})
 }
