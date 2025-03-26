@@ -11,11 +11,11 @@ import (
 )
 
 type Chat struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	ChatBy    uuid.UUID
-	ChatWith  uuid.UUID
+	ID         uuid.UUID
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	SenderID   uuid.UUID
+	ReceiverID uuid.UUID
 }
 
 type Message struct {

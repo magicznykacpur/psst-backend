@@ -31,7 +31,13 @@ func main() {
 	mux.HandleFunc("GET /api/users", apiConfig.HandlerGetUsers)
 	mux.HandleFunc("GET /api/users/{id}", apiConfig.HandlerGetUser)
 	mux.HandleFunc("POST /api/users", apiConfig.HandlerCreateUser)
+
 	mux.HandleFunc("POST /api/login", apiConfig.HandlerLoginUser)
+
+	mux.Handle("POST /api/messages", apiConfig.IsLoggedIn(apiConfig.HandlerCreateMessage))
+	mux.Handle("GET /api/messages/{chat_id}", apiConfig.IsLoggedIn(apiConfig.HandlerGetAllMessagesFromChat))
+	mux.Handle("POST /api/chats", apiConfig.IsLoggedIn(apiConfig.HandlerCreateChat))
+	mux.Handle("GET /api/chats", apiConfig.IsLoggedIn(apiConfig.HandlerGetAllUsersChats))
 
 	server := http.Server{Handler: &mux, Addr: "localhost:" + apiConfig.Port}
 

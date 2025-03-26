@@ -12,33 +12,33 @@ import (
 )
 
 const createChatWith = `-- name: CreateChatWith :one
-INSERT INTO chats (id, created_at, updated_at, chat_by, chat_with)
+INSERT INTO chats (id, created_at, updated_at, sender_id, receiver_id)
 VALUES (
     gen_random_uuid (), NOW(), NOW(), $1, $2
 )
-RETURNING id, created_at, updated_at, chat_by, chat_with
+RETURNING id, created_at, updated_at, sender_id, receiver_id
 `
 
 type CreateChatWithParams struct {
-	ChatBy   uuid.UUID
-	ChatWith uuid.UUID
+	SenderID   uuid.UUID
+	ReceiverID uuid.UUID
 }
 
 func (q *Queries) CreateChatWith(ctx context.Context, arg CreateChatWithParams) (Chat, error) {
-	row := q.db.QueryRowContext(ctx, createChatWith, arg.ChatBy, arg.ChatWith)
+	row := q.db.QueryRowContext(ctx, createChatWith, arg.SenderID, arg.ReceiverID)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.ChatBy,
-		&i.ChatWith,
+		&i.SenderID,
+		&i.ReceiverID,
 	)
 	return i, err
 }
 
 const getChatById = `-- name: GetChatById :one
-SELECT id, created_at, updated_at, chat_by, chat_with FROM chats WHERE id = $1
+SELECT id, created_at, updated_at, sender_id, receiver_id FROM chats WHERE id = $1
 `
 
 func (q *Queries) GetChatById(ctx context.Context, id uuid.UUID) (Chat, error) {
@@ -48,18 +48,18 @@ func (q *Queries) GetChatById(ctx context.Context, id uuid.UUID) (Chat, error) {
 		&i.ID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.ChatBy,
-		&i.ChatWith,
+		&i.SenderID,
+		&i.ReceiverID,
 	)
 	return i, err
 }
 
 const getChatsByUser = `-- name: GetChatsByUser :many
-SELECT id, created_at, updated_at, chat_by, chat_with FROM chats WHERE chat_by = $1
+SELECT id, created_at, updated_at, sender_id, receiver_id FROM chats WHERE sender_id = $1
 `
 
-func (q *Queries) GetChatsByUser(ctx context.Context, chatBy uuid.UUID) ([]Chat, error) {
-	rows, err := q.db.QueryContext(ctx, getChatsByUser, chatBy)
+func (q *Queries) GetChatsByUser(ctx context.Context, senderID uuid.UUID) ([]Chat, error) {
+	rows, err := q.db.QueryContext(ctx, getChatsByUser, senderID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +71,8 @@ func (q *Queries) GetChatsByUser(ctx context.Context, chatBy uuid.UUID) ([]Chat,
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.ChatBy,
-			&i.ChatWith,
+			&i.SenderID,
+			&i.ReceiverID,
 		); err != nil {
 			return nil, err
 		}

@@ -3,10 +3,10 @@ CREATE TABLE chats (
     id UUID PRIMARY KEY,
     created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL,
-    chat_by UUID NOT NULL,
-    chat_with UUID NOT NULL,
-    FOREIGN KEY (chat_by) REFERENCES users (id),
-    FOREIGN KEY (chat_with) REFERENCES users (id)
+    sender_id UUID NOT NULL,
+    receiver_id UUID NOT NULL,
+    FOREIGN KEY (sender_id) REFERENCES users (id),
+    FOREIGN KEY (receiver_id) REFERENCES users (id)
 );
 
 -- +goose Down
