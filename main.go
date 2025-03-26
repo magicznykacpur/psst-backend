@@ -29,9 +29,11 @@ func main() {
 	mux := http.ServeMux{}
 
 	mux.HandleFunc("GET /api/users", apiConfig.HandlerGetUsers)
+	mux.HandleFunc("GET /api/users/{id}", apiConfig.HandlerGetUser)
+	mux.HandleFunc("POST /api/users", apiConfig.HandlerCreateUser)
 
-	server := http.Server{Handler: &mux, Addr: ":" + apiConfig.Port}
+	server := http.Server{Handler: &mux, Addr: "localhost:" + apiConfig.Port}
 
-	log.Printf("Starting `psst` server at %s", server.Addr)
+	log.Printf("starting `psst` server at %s", server.Addr)
 	server.ListenAndServe()
 }
