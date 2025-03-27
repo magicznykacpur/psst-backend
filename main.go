@@ -28,6 +28,8 @@ func main() {
 
 	mux := http.ServeMux{}
 
+	mux.HandleFunc("POST /api/validity", apiConfig.HandlerCheckTokenValidity)
+
 	mux.HandleFunc("GET /api/users", apiConfig.HandlerGetUsers)
 	mux.HandleFunc("GET /api/users/{id}", apiConfig.HandlerGetUser)
 	mux.HandleFunc("POST /api/users", apiConfig.HandlerCreateUser)
