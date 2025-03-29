@@ -37,6 +37,40 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const getAvailableToChatWith = `-- name: GetAvailableToChatWith :many
+SELECT id, created_at, updated_at, email, user_name, hashed_password FROM users WHERE users.id != $1 AND users.id NOT IN (SELECT receiver_id FROM chats WHERE sender_id = $1)
+`
+
+func (q *Queries) GetAvailableToChatWith(ctx context.Context, id uuid.UUID) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getAvailableToChatWith, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Email,
+			&i.UserName,
+			&i.HashedPassword,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, created_at, updated_at, email, user_name, hashed_password FROM users WHERE email = $1
 `

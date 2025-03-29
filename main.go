@@ -34,6 +34,9 @@ func main() {
 	mux.HandleFunc("GET /api/users/{id}", apiConfig.HandlerGetUser)
 	mux.HandleFunc("POST /api/users", apiConfig.HandlerCreateUser)
 
+	mux.Handle("GET /api/users/me", apiConfig.IsLoggedIn(apiConfig.HandlerGetMe))
+	mux.Handle("GET /api/users/to-chat-with", apiConfig.IsLoggedIn(apiConfig.HandlerGetUsersAvailableToChatWith))
+
 	mux.HandleFunc("POST /api/login", apiConfig.HandlerLoginUser)
 
 	mux.Handle("POST /api/messages", apiConfig.IsLoggedIn(apiConfig.HandlerCreateMessage))

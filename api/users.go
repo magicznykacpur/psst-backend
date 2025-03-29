@@ -15,11 +15,11 @@ import (
 )
 
 type userResponse struct {
-	ID        string    `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
-	Username  string    `json:"username"`
+	ID        string `json:"id"`
+	CreatedAt string `json:"created_at,omitempty"`
+	UpdatedAt string `json:"updated_at,omitempty"`
+	Email     string `json:"email,omitempty"`
+	Username  string `json:"username"`
 }
 
 func (cfg *ApiConfig) HandlerGetUsers(w http.ResponseWriter, r *http.Request) {
@@ -34,8 +34,8 @@ func (cfg *ApiConfig) HandlerGetUsers(w http.ResponseWriter, r *http.Request) {
 		usersResponse = append(usersResponse,
 			userResponse{
 				ID:        user.ID.String(),
-				CreatedAt: user.CreatedAt,
-				UpdatedAt: user.UpdatedAt,
+				CreatedAt: user.CreatedAt.String(),
+				UpdatedAt: user.UpdatedAt.String(),
 				Email:     user.Email,
 				Username:  user.UserName,
 			},
@@ -67,8 +67,8 @@ func (cfg *ApiConfig) HandlerGetUser(w http.ResponseWriter, r *http.Request) {
 
 	response := userResponse{
 		ID:        user.ID.String(),
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		CreatedAt: user.CreatedAt.String(),
+		UpdatedAt: user.UpdatedAt.String(),
 		Email:     user.Email,
 		Username:  user.UserName,
 	}
@@ -133,8 +133,8 @@ func (cfg *ApiConfig) HandlerCreateUser(w http.ResponseWriter, r *http.Request) 
 	respondWithJSON(w, http.StatusCreated,
 		userResponse{
 			ID:        user.ID.String(),
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
+			CreatedAt: user.CreatedAt.String(),
+			UpdatedAt: user.UpdatedAt.String(),
 			Email:     user.Email,
 			Username:  user.UserName,
 		},
@@ -196,4 +196,54 @@ func (cfg *ApiConfig) HandlerLoginUser(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("user %s logged in...", user.UserName)
 	respondWithJSON(w, http.StatusOK, loginUserResponse{Token: token})
+}
+
+func (cfg *ApiConfig) HandlerGetMe(w http.ResponseWriter, r *http.Request) {
+	userId, err := uuid.Parse(r.Header.Get("User-ID"))
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "id malformed")
+		return
+	}
+
+	user, err := cfg.DB.GetUserByID(r.Context(), userId)
+	if err != nil && strings.Contains(err.Error(), noRows) {
+		respondWithError(w, http.StatusNotFound, "user not found")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK,
+		userResponse{
+			ID:        user.ID.String(),
+			CreatedAt: user.CreatedAt.String(),
+			UpdatedAt: user.UpdatedAt.String(),
+			Username:  user.UserName,
+			Email:     user.Email,
+		},
+	)
+}
+
+func (cfg *ApiConfig) HandlerGetUsersAvailableToChatWith(w http.ResponseWriter, r *http.Request) {
+	userId, err := uuid.Parse(r.Header.Get("User-ID"))
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "id malformed")
+		return
+	}
+
+	users, err := cfg.DB.GetAvailableToChatWith(r.Context(), userId)
+	if err != nil && strings.Contains(err.Error(), noRows) {
+		respondWithError(w, http.StatusNotFound, "couldn't find any users to chat with")
+		return
+	}
+
+	usersResponse := []userResponse{}
+	for _, user := range users {
+		usersResponse = append(usersResponse,
+			userResponse{
+				ID:       user.ID.String(),
+				Username: user.UserName,
+			},
+		)
+	}
+
+	respondWithJSON(w, http.StatusOK, usersResponse)
 }
