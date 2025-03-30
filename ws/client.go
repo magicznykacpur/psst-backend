@@ -14,7 +14,7 @@ type Client struct {
 	hub    *Hub
 	conn   *websocket.Conn
 	send   chan []byte
-	userID uuid.UUID
+	UserID uuid.UUID
 }
 
 var upgrader = websocket.Upgrader{
@@ -52,7 +52,7 @@ func (c *Client) readMessages() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+		c.hub.Broadcast <- message
 	}
 }
 
@@ -109,7 +109,7 @@ func ServeWS(h *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Printf("serveWS error: %v", err)
 	}
 
-	client := &Client{hub: h, conn: conn, send: make(chan []byte, 256), userID: userID}
+	client := &Client{hub: h, conn: conn, send: make(chan []byte, 256), UserID: userID}
 	client.hub.register <- client
 
 	log.Printf("client connected from: %s", r.RemoteAddr)

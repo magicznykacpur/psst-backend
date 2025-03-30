@@ -1,39 +1,70 @@
 package ws
 
+import (
+	"encoding/json"
+	"log"
+	"slices"
+
+	"github.com/google/uuid"
+)
+
 type Hub struct {
-	clients    map[*Client]bool
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
+	Clients      map[*Client]bool
+	Broadcast    chan []byte
+	BroadcastFor chan []byte
+	register     chan *Client
+	unregister   chan *Client
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		clients:    map[*Client]bool{},
-		broadcast:  make(chan []byte),
+		Clients:    map[*Client]bool{},
+		Broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 	}
+}
+
+type broadcastForRequest struct {
+	Clients []uuid.UUID
+	Message []byte
 }
 
 func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client] = true
+			h.Clients[client] = true
 		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
+			if _, ok := h.Clients[client]; ok {
+				delete(h.Clients, client)
 				close(client.send)
 			}
-			h.clients[client] = false
-		case message := <-h.broadcast:
-			for client := range h.clients {
+			h.Clients[client] = false
+		case message := <-h.Broadcast:
+			for client := range h.Clients {
 				select {
 				case client.send <- message:
 				default:
 					close(client.send)
-					delete(h.clients, client)
+					delete(h.Clients, client)
+				}
+			}
+		case broadcastForReq := <-h.BroadcastFor:
+			var broadcastFor broadcastForRequest
+			err := json.Unmarshal(broadcastForReq, &broadcastFor)
+			if err != nil {
+				log.Printf("coudlnt unmarshal broadcast request: %v", err)
+			}
+
+			for client := range h.Clients {
+				if slices.Contains(broadcastFor.Clients, client.UserID) {
+					select {
+					case client.send <- broadcastFor.Message:
+					default:
+						close(client.send)
+						delete(h.Clients, client)
+					}
 				}
 			}
 		}

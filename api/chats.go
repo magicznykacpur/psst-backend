@@ -72,6 +72,24 @@ func (cfg *ApiConfig) HandlerCreateChat(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	for client, _ := range cfg.Hub.Clients {
+		if client.UserID == senderId || client.UserID == receiverId {
+			broadcastFor := struct {
+				Clients []uuid.UUID
+				Message []byte
+			}{
+				[]uuid.UUID{senderId, receiverId},
+				[]byte("new chat created"),
+			}
+			bytes, err := json.Marshal(broadcastFor)
+			if err != nil {
+				log.Printf("cannot marshall broadcast for: %v", err)
+			}
+
+			cfg.Hub.BroadcastFor <- bytes
+		}
+	}
+
 	log.Printf("chat %s created between %s and %s...", chat.ID, senderId, receiverId)
 
 	w.WriteHeader(http.StatusCreated)

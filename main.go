@@ -22,13 +22,14 @@ func main() {
 		log.Fatalf("couldn't open database: %v", err)
 	}
 
+	hub := ws.NewHub()
+	go hub.Run()
+
 	apiConfig := api.ApiConfig{
 		DB:   database.New(sqlDB),
 		Port: os.Getenv("PORT"),
+		Hub:  hub,
 	}
-
-	hub := ws.NewHub()
-	go hub.Run()
 
 	mux := http.ServeMux{}
 
