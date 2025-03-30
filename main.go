@@ -11,6 +11,7 @@ import (
 	"github.com/magicznykacpur/psst-backend/api"
 	"github.com/magicznykacpur/psst-backend/env"
 	"github.com/magicznykacpur/psst-backend/internal/database"
+	"github.com/magicznykacpur/psst-backend/ws"
 )
 
 func main() {
@@ -26,7 +27,14 @@ func main() {
 		Port: os.Getenv("PORT"),
 	}
 
+	hub := ws.NewHub()
+	go hub.Run()
+
 	mux := http.ServeMux{}
+
+	mux.Handle("/ws", apiConfig.IsLoggedIn(func(w http.ResponseWriter, r *http.Request) {
+		ws.ServeWS(hub, w, r)
+	}))
 
 	mux.HandleFunc("POST /api/validity", apiConfig.HandlerCheckTokenValidity)
 
