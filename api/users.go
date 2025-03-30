@@ -188,7 +188,7 @@ func (cfg *ApiConfig) HandlerLoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.CreateJWTToken(user.ID, os.Getenv("JWT_SECRET"), time.Hour)
+	token, err := auth.CreateJWTToken(user.ID, os.Getenv("JWT_SECRET"), time.Hour * 3600)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't create jwt token")
 		return

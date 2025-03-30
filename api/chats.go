@@ -78,11 +78,11 @@ func (cfg *ApiConfig) HandlerCreateChat(w http.ResponseWriter, r *http.Request) 
 }
 
 type chatResponse struct {
-	ID         uuid.UUID `json:"id"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
-	SenderId   uuid.UUID `json:"sender_id"`
-	ReceiverId uuid.UUID `json:"receiver_id"`
+	ID        uuid.UUID    `json:"id"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+	Sender    userResponse `json:"sender"`
+	Receiver  userResponse `json:"receiver"`
 }
 
 func (cfg *ApiConfig) HandlerGetAllUsersChats(w http.ResponseWriter, r *http.Request) {
@@ -102,11 +102,17 @@ func (cfg *ApiConfig) HandlerGetAllUsersChats(w http.ResponseWriter, r *http.Req
 	for _, chat := range chats {
 		chatsResponse = append(chatsResponse,
 			chatResponse{
-				ID:         chat.ID,
-				CreatedAt:  chat.CreatedAt,
-				UpdatedAt:  chat.UpdatedAt,
-				SenderId:   chat.SenderID,
-				ReceiverId: chat.ReceiverID,
+				ID:        chat.ID,
+				CreatedAt: chat.CreatedAt,
+				UpdatedAt: chat.UpdatedAt,
+				Sender: userResponse{
+					ID:       chat.SenderID.String(),
+					Username: chat.SenderUsername,
+				},
+				Receiver: userResponse{
+					ID:       chat.ReceiverID.String(),
+					Username: chat.ReceiverUsername,
+				},
 			},
 		)
 	}

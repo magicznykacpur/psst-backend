@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -91,24 +92,42 @@ func (q *Queries) GetChatByIdAndSender(ctx context.Context, arg GetChatByIdAndSe
 }
 
 const getChatsByUser = `-- name: GetChatsByUser :many
-SELECT id, created_at, updated_at, sender_id, receiver_id FROM chats WHERE sender_id = $1
+SELECT chats.id, chats.created_at, chats.updated_at,
+ receiver_id, users1.user_name as receiver_username,
+ sender_id, users2.user_name as sender_username
+FROM chats
+JOIN users users1 ON chats.receiver_id = users1.id
+JOIN users users2 ON chats.sender_id = users2.id
+WHERE sender_id = $1 OR receiver_id = $1
 `
 
-func (q *Queries) GetChatsByUser(ctx context.Context, senderID uuid.UUID) ([]Chat, error) {
+type GetChatsByUserRow struct {
+	ID               uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ReceiverID       uuid.UUID
+	ReceiverUsername string
+	SenderID         uuid.UUID
+	SenderUsername   string
+}
+
+func (q *Queries) GetChatsByUser(ctx context.Context, senderID uuid.UUID) ([]GetChatsByUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getChatsByUser, senderID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Chat
+	var items []GetChatsByUserRow
 	for rows.Next() {
-		var i Chat
+		var i GetChatsByUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.SenderID,
 			&i.ReceiverID,
+			&i.ReceiverUsername,
+			&i.SenderID,
+			&i.SenderUsername,
 		); err != nil {
 			return nil, err
 		}

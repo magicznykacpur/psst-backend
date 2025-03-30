@@ -13,8 +13,10 @@ import (
 )
 
 type createMessageRequest struct {
-	ChatID string `json:"chat_id"`
-	Body   string `json:"body"`
+	ChatID     string `json:"chat_id"`
+	Body       string `json:"body"`
+	SenderId   string `json:"sender_id"`
+	ReceiverId string `json:"receiver_id"`
 }
 
 func (cfg *ApiConfig) HandlerCreateMessage(w http.ResponseWriter, r *http.Request) {
@@ -50,12 +52,24 @@ func (cfg *ApiConfig) HandlerCreateMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	senderID, err := uuid.Parse(msgRequest.SenderId)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "sender id malformed")
+		return
+	}
+
+	receiverID, err := uuid.Parse(msgRequest.ReceiverId)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "receiver id malformed")
+		return
+	}
+
 	message, err := cfg.DB.CreateMessage(r.Context(),
 		database.CreateMessageParams{
 			ChatID:     chat.ID,
 			Body:       msgRequest.Body,
-			SenderID:   chat.SenderID,
-			ReceiverID: chat.ReceiverID,
+			SenderID:   senderID,
+			ReceiverID: receiverID,
 		},
 	)
 	if err != nil {
@@ -69,9 +83,11 @@ func (cfg *ApiConfig) HandlerCreateMessage(w http.ResponseWriter, r *http.Reques
 }
 
 type messageResponse struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	Body      string    `json:"body"`
+	ID         uuid.UUID `json:"id"`
+	CreatedAt  time.Time `json:"created_at"`
+	Body       string    `json:"body"`
+	SenderID   uuid.UUID `json:"sender_id"`
+	ReceiverID uuid.UUID `json:"receiver_id"`
 }
 
 func (cfg *ApiConfig) HandlerGetAllMessagesFromChat(w http.ResponseWriter, r *http.Request) {
@@ -93,7 +109,7 @@ func (cfg *ApiConfig) HandlerGetAllMessagesFromChat(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if chat.SenderID != userId {
+	if chat.SenderID != userId && chat.ReceiverID != userId {
 		respondWithError(w, http.StatusForbidden, "chat doesn't belong to user")
 		return
 	}
@@ -108,9 +124,11 @@ func (cfg *ApiConfig) HandlerGetAllMessagesFromChat(w http.ResponseWriter, r *ht
 	for _, msg := range messages {
 		msgsResponse = append(msgsResponse,
 			messageResponse{
-				ID:        msg.ID,
-				CreatedAt: msg.CreatedAt,
-				Body:      msg.Body,
+				ID:         msg.ID,
+				CreatedAt:  msg.CreatedAt,
+				Body:       msg.Body,
+				SenderID:   msg.SenderID,
+				ReceiverID: msg.ReceiverID,
 			},
 		)
 	}
