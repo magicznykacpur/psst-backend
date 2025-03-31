@@ -18,10 +18,11 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Clients:    map[*Client]bool{},
-		Broadcast:  make(chan []byte),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		Clients:      map[*Client]bool{},
+		Broadcast:    make(chan []byte),
+		BroadcastFor: make(chan []byte),
+		register:     make(chan *Client),
+		unregister:   make(chan *Client),
 	}
 }
 
@@ -57,14 +58,19 @@ func (h *Hub) Run() {
 				log.Printf("coudlnt unmarshal broadcast request: %v", err)
 			}
 
+			clientsToBroadcast := []*Client{}
 			for client := range h.Clients {
 				if slices.Contains(broadcastFor.Clients, client.UserID) {
-					select {
-					case client.send <- broadcastFor.Message:
-					default:
-						close(client.send)
-						delete(h.Clients, client)
-					}
+					clientsToBroadcast = append(clientsToBroadcast, client)
+				}
+			}
+
+			for _, client := range clientsToBroadcast {
+				select {
+				case client.send <- broadcastFor.Message:
+				default:
+					close(client.send)
+					delete(h.Clients, client)
 				}
 			}
 		}
